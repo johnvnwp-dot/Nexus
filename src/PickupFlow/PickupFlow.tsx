@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, Unlock, Delete, AlertTriangle, Loader2, Package } from 'lucide-react';
+import { ChevronLeft, Unlock, Delete, AlertTriangle, Loader2, Package, Info, X } from 'lucide-react';
 
-// 🌟 CLEAN, TEXT-ONLY PULSING HINT COMPONENT
-const DemoHint = ({ message, className = "" }: { message: string, className?: string }) => {
+// 🌟 CLEAN, TEXT-ONLY PULSING HINT COMPONENT WITH INFO BUTTON
+const DemoHint = ({ message, className = "", onInfoClick }: { message: string, className?: string, onInfoClick?: () => void }) => {
   const [show, setShow] = useState(() => localStorage.getItem('demoHints') !== 'false');
   
   useEffect(() => {
@@ -14,11 +14,51 @@ const DemoHint = ({ message, className = "" }: { message: string, className?: st
   if (!show) return null;
 
   return (
-    <div className={`absolute pointer-events-none animate-pulse text-yellow-400 font-normal tracking-wide z-[200] ${className}`}>
-       {message}
+    <div className={`flex items-center justify-center gap-2 animate-pulse text-yellow-400 font-normal tracking-wide z-[200] ${className}`}>
+       <span>{message}</span>
+       {onInfoClick && (
+         <button 
+           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onInfoClick(); }} 
+           className="pointer-events-auto bg-yellow-400/20 hover:bg-yellow-400/40 text-yellow-400 rounded-full p-1 transition-colors"
+           title="View PUDO Workflow"
+         >
+           <Info size={16} />
+         </button>
+       )}
     </div>
   );
 };
+
+// 🌟 THE WORKFLOW EXPLANATION OVERLAY (Pickup Only)
+const WorkflowInfoOverlay = ({ onClose }: { onClose: () => void }) => (
+  <div className="absolute inset-0 z-[999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-8 animate-in fade-in duration-300 pointer-events-auto">
+    <div className="bg-slate-900 border-2 border-slate-700 rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-full overflow-y-auto shadow-2xl relative">
+      <button 
+        onClick={onClose}
+        className="absolute top-4 right-4 bg-slate-800 hover:bg-slate-700 text-white rounded-full p-2 transition-colors active:scale-95"
+      >
+        <X size={24} />
+      </button>
+
+      <h2 className="text-2xl font-black text-white uppercase mb-6 tracking-wide flex items-center gap-3">
+         <Info className="text-yellow-400" size={28} />
+         SmartLocker Pick-Up
+      </h2>
+
+      <div className="space-y-6 text-slate-300 text-sm sm:text-base leading-relaxed">
+        <div className="border-l-2 border-emerald-500 pl-4">
+          <h3 className="text-emerald-400 font-bold text-lg mb-3">Customer Collection Process</h3>
+          <ul className="list-disc list-inside space-y-3 ml-2">
+            <li>The customer receives a notification and enters their 6-digit WhatsApp PIN code.</li>
+            <li><strong>Payment (If applicable):</strong> If the item is marked as COD (Cash on Delivery), the customer scans the on-screen QR code to settle the balance before the door will unlock.</li>
+            <li>The locker door opens, they retrieve their item, and physically close the door.</li>
+            <li>That locker is now empty and marked as <strong className="text-red-400">Unavailable</strong> in the system until a courier reprovisions it with an empty bag.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 export interface PickUpFlowProps {
   onDone: () => void;
@@ -37,6 +77,7 @@ const PickUpFlow: React.FC<PickUpFlowProps> = ({ onDone, config }) => {
   const [paymentData, setPaymentData] = useState<{amount: string, orderId: string, qrBase64: string | null}>({ amount: '0.00', orderId: '', qrBase64: null });
   const [isDoorClosed, setIsDoorClosed] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isVerifying = useRef(false);
@@ -152,6 +193,7 @@ const PickUpFlow: React.FC<PickUpFlowProps> = ({ onDone, config }) => {
   // ==========================================
   return (
     <div className="h-full w-full bg-[#0f172a] rounded-xl border border-slate-700 shadow-2xl flex flex-col relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8">
+        {showInfo && <WorkflowInfoOverlay onClose={() => setShowInfo(false)} />}
         
         {/* Header / Cancel Block */}
         <div className="flex justify-between items-center w-full mb-2 shrink-0 z-50 relative">
@@ -201,8 +243,8 @@ const PickUpFlow: React.FC<PickUpFlowProps> = ({ onDone, config }) => {
                     </div>
                   ))}
                 </div>
-                
-                {/* 3. YELLOW HINT & BUTTON (BOTTOM) */}
+
+                {/*44 3. YELLOW HINT & BUTTON (BOTTOM) */}
                 <div className="flex flex-col items-center w-full relative">
                     
                     {status === 'ERROR' ? (
@@ -211,7 +253,12 @@ const PickUpFlow: React.FC<PickUpFlowProps> = ({ onDone, config }) => {
                         </p>
                     ) : (
                         <div className="h-6 mb-4 flex justify-center items-center w-full relative">
-                           <DemoHint message="Demo PINs: 123456 or 888888" className="text-sm" />
+                           {/* 🌟 TRIGGER ADDED HERE */}
+                           <DemoHint 
+                             message="Demo PINs: 123456 or 888888" 
+                             onInfoClick={() => setShowInfo(true)} 
+                             className="text-sm" 
+                           />
                         </div>
                     )}
 
@@ -297,6 +344,16 @@ const PickUpFlow: React.FC<PickUpFlowProps> = ({ onDone, config }) => {
               </div>
             )}
             
+        </div>
+        {/* 🌟 FLOATING "HOW IT WORKS" BUTTON */}
+        <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 pointer-events-auto">
+          <button 
+             onClick={(e) => { e.preventDefault(); setShowInfo(true); }} 
+             className="flex items-center gap-2 text-yellow-500/80 hover:text-yellow-400 transition-colors bg-[#0f172a] px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl border-2 border-yellow-500/20 shadow-lg active:scale-95"
+          >
+            <Info size={18} className="text-yellow-500" />
+            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">How it Works</span>
+          </button>
         </div>
     </div>
   );

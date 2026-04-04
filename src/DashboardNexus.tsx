@@ -1,5 +1,58 @@
 import React, { useState, useEffect } from 'react';
-import { Wifi, Truck, Package, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Wifi, Truck, Package, ToggleLeft, ToggleRight, Info, X } from 'lucide-react';
+
+// 🌟 THE WORKFLOW EXPLANATION OVERLAY (Updated to "absolute" to stay in the tablet screen)
+const WorkflowInfoOverlay = ({ onClose }: { onClose: () => void }) => (
+  <div className="absolute inset-0 z-[999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-8 animate-in fade-in duration-300 pointer-events-auto">
+    <div className="bg-slate-900 border-2 border-slate-700 rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-full overflow-y-auto shadow-2xl relative">
+      <button 
+        onClick={onClose}
+        className="absolute top-4 right-4 bg-slate-800 hover:bg-slate-700 text-white rounded-full p-2 transition-colors active:scale-95"
+      >
+        <X size={24} />
+      </button>
+
+      <h2 className="text-2xl font-black text-white uppercase mb-6 tracking-wide flex items-center gap-3">
+         <Info className="text-yellow-400" size={28} />
+         SmartLocker PUDO Workflow
+      </h2>
+
+      <div className="space-y-6 text-slate-300 text-sm sm:text-base leading-relaxed">
+        <div>
+          <h3 className="text-white font-bold text-lg mb-1">The Base State</h3>
+          <p>To facilitate seamless sending, all available lockers are pre-provisioned with an empty courier bag.</p>
+        </div>
+
+        <div className="border-l-2 border-blue-500 pl-4">
+          <h3 className="text-blue-400 font-bold text-lg mb-1">1. Customer: Drop-Off</h3>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li>The customer enters their details, consignee details, and selects a payment method.</li>
+            <li>Once approved, a door opens. They remove the empty bag, place their item inside, seal it, and return it.</li>
+            <li>Once closed, the locker is marked as <strong className="text-red-400">Unavailable</strong> until cleared by a courier.</li>
+          </ul>
+        </div>
+
+        <div className="border-l-2 border-emerald-500 pl-4">
+          <h3 className="text-emerald-400 font-bold text-lg mb-1">2. Customer: Pick-Up</h3>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li>The customer enters their WhatsApp PIN code (and settles COD balances if applicable).</li>
+            <li>The door opens, they retrieve their item, and close the door.</li>
+            <li>That locker is now empty and marked as <strong className="text-red-400">Unavailable</strong> until reprovisioned.</li>
+          </ul>
+        </div>
+
+        <div className="border-l-2 border-amber-500 pl-4">
+          <h3 className="text-amber-400 font-bold text-lg mb-1">3. Courier: Daily Operations</h3>
+          <ul className="list-disc list-inside space-y-2 ml-2">
+            <li><strong>Drop-Off & Exchange:</strong> The courier assigns incoming parcels. If a target locker contains an outgoing parcel, the courier removes it, places the new incoming parcel inside, and closes the door.</li>
+            <li><strong>Sweep:</strong> The courier opens remaining unavailable lockers to collect any other outgoing customer parcels destined for the depot.</li>
+            <li><strong>Restock:</strong> Finally, the courier opens all empty doors and replenishes them with fresh courier bags, resetting the system.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 export interface DashboardProps {
   onPickup: () => void;
@@ -18,6 +71,7 @@ const DashboardNexus: React.FC<DashboardProps> = ({
 }) => {
   const [isIdle, setIsIdle] = useState(true); 
   const [isWaking, setIsWaking] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   
   // 🌟 THE GLOBAL HINTS TOGGLE
   const [showHints, setShowHints] = useState(() => localStorage.getItem('demoHints') !== 'false');
@@ -32,7 +86,7 @@ const DashboardNexus: React.FC<DashboardProps> = ({
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout>;
     const resetTimer = () => {
-      if (isIdle) return; 
+      if (isIdle || showInfo) return; 
       clearTimeout(timeout);
       timeout = setTimeout(() => setIsIdle(true), 60000); 
     };
@@ -50,7 +104,7 @@ const DashboardNexus: React.FC<DashboardProps> = ({
       window.removeEventListener('click', resetTimer);
       window.removeEventListener('keypress', resetTimer);
     };
-  }, [isIdle]);
+  }, [isIdle, showInfo]);
 
   const handleWakeUp = () => {
     setIsWaking(true);
@@ -63,11 +117,13 @@ const DashboardNexus: React.FC<DashboardProps> = ({
   return (
     <div className="relative w-full h-full bg-[#020617] flex flex-col font-sans overflow-hidden">
       
+      {/* 🌟 RENDER THE OVERLAY IF TRIGGERED */}
+      {showInfo && <WorkflowInfoOverlay onClose={() => setShowInfo(false)} />}
+
       <div 
         className={`absolute inset-0 z-[100] bg-black transition-opacity duration-500 flex flex-col items-center justify-end pb-32 ${isIdle ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         onClick={handleWakeUp}
       >
-        {/* 🎬 YOUR VIDEO TAG IS BACK */}
         <video 
           autoPlay 
           loop 
@@ -75,11 +131,9 @@ const DashboardNexus: React.FC<DashboardProps> = ({
           playsInline 
           className="absolute inset-0 w-full h-full object-cover opacity-60"
         >
-          {/* Make sure this path matches your actual video file! */}
           <source src="/promo.mp4" type="video/mp4" />
         </video>
 
-        {/* Gradient overlay to make the text pop against the video */}
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900/40 via-blue-900/20 to-black/90"></div>
 
         <div className="relative z-10 flex flex-col items-center">
@@ -134,8 +188,8 @@ const DashboardNexus: React.FC<DashboardProps> = ({
       </main>
 
       <footer className="absolute bottom-6 left-0 right-0 px-8 flex justify-between items-end z-50">
-        {/* 🌟 DEMO HINTS TOGGLE */}
-        <div className="flex flex-col items-start gap-2 w-[200px]">
+        {/* Left Side: Hints Toggle */}
+        <div className="w-[200px] flex items-end pb-2">
           <button 
              onClick={toggleHints} 
              className="flex items-center gap-2 text-slate-500 hover:text-slate-300 transition-colors"
@@ -145,10 +199,21 @@ const DashboardNexus: React.FC<DashboardProps> = ({
           </button>
         </div> 
         
-        <div className="text-center text-slate-600 text-xs font-medium pb-2">
-          v3.5.0 Build 2026-03-26 | Enterprise Kiosk Mode Active
+        {/* Center: Info Button & Version */}
+        <div className="flex flex-col items-center gap-3">
+          <button 
+             onClick={() => setShowInfo(true)} 
+             className="flex items-center gap-2 text-yellow-500/80 hover:text-yellow-400 transition-colors bg-yellow-500/10 px-4 py-2 rounded-lg border border-yellow-500/20 shadow-sm"
+          >
+            <Info size={18} />
+            <span className="text-xs font-bold uppercase tracking-wider">How it Works</span>
+          </button>
+          <div className="text-center text-slate-600 text-xs font-medium">
+            v3.5.0 Build 2026-03-26 | Enterprise Kiosk Mode Active
+          </div>
         </div>
 
+        {/* Right Side: Courier Button */}
         <div className="w-[200px] flex justify-end">
           <button 
             onClick={() => { if (!isWaking && onCourier) onCourier(); }}

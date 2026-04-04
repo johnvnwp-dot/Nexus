@@ -1,9 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import type { LockerSize } from './index';
-import { ChevronLeft, Box, Loader2, X, Home, Globe2, Truck, School, Send, ShieldCheck, Building, CreditCard, AlertTriangle, DoorOpen, UserPen, MapPin, CheckCircle2, ArrowRight, PenLine, Banknote } from 'lucide-react';
+import { ChevronLeft, Box, Loader2, X, Home, Globe2, Truck, School, Send, ShieldCheck, Building, CreditCard, AlertTriangle, DoorOpen, UserPen, MapPin, CheckCircle2, ArrowRight, PenLine, Banknote, Info } from 'lucide-react';
 
-// 🌟 NEW: CLEAN, NON-BOLD, PULSING TEXT COMPONENT
-const DemoHint = ({ message, className = "" }: { message: string, className?: string }) => {
+// 🌟 THE WORKFLOW EXPLANATION OVERLAY (Drop-Off Only)
+const WorkflowInfoOverlay = ({ onClose }: { onClose: () => void }) => (
+  <div className="absolute inset-0 z-[999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-8 animate-in fade-in duration-300 pointer-events-auto">
+    <div className="bg-slate-900 border-2 border-slate-700 rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-full overflow-y-auto shadow-2xl relative">
+      <button 
+        onClick={onClose}
+        className="absolute top-4 right-4 bg-slate-800 hover:bg-slate-700 text-white rounded-full p-2 transition-colors active:scale-95"
+      >
+        <X size={24} />
+      </button>
+
+      <h2 className="text-2xl font-black text-white uppercase mb-6 tracking-wide flex items-center gap-3">
+         <Info className="text-yellow-400" size={28} />
+         SmartLocker Drop-Off
+      </h2>
+
+      <div className="space-y-6 text-slate-300 text-sm sm:text-base leading-relaxed">
+        <div className="border-l-2 border-blue-500 pl-4">
+          <h3 className="text-blue-400 font-bold text-lg mb-3">Customer Sending Process</h3>
+          <ul className="list-disc list-inside space-y-3 ml-2">
+            <li>The customer selects their parcel size and routing destination (Local vs. International).</li>
+            <li>They enter their own contact details and authenticate via an SMS OTP.</li>
+            <li>They enter the recipient's details and choose who pays for the delivery (Prepaid via QR code or Cash on Delivery).</li>
+            <li>Once approved, a door opens. They remove the pre-provisioned empty bag, place their item inside, seal it, and return it.</li>
+            <li>Once physically closed, the locker is marked as <strong className="text-red-400">Unavailable</strong> until cleared by a courier.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// 🌟 CLEAN, NON-BOLD, PULSING TEXT COMPONENT WITH INFO BUTTON
+const DemoHint = ({ message, className = "", onInfoClick }: { message: string, className?: string, onInfoClick?: () => void }) => {
   const [show, setShow] = useState(() => localStorage.getItem('demoHints') !== 'false');
   
   useEffect(() => {
@@ -15,8 +47,17 @@ const DemoHint = ({ message, className = "" }: { message: string, className?: st
   if (!show) return null;
 
   return (
-    <div className={`pointer-events-none animate-pulse text-yellow-400 font-normal tracking-wide z-[200] ${className}`}>
-       {message}
+    <div className={`flex items-center justify-center gap-2 animate-pulse text-yellow-400 font-normal tracking-wide z-[200] ${className}`}>
+       <span>{message}</span>
+       {onInfoClick && (
+         <button 
+           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onInfoClick(); }} 
+           className="pointer-events-auto bg-yellow-400/20 hover:bg-yellow-400/40 text-yellow-400 rounded-full p-1 transition-colors"
+           title="View Workflow Info"
+         >
+           <Info size={16} />
+         </button>
+       )}
     </div>
   );
 };
@@ -40,6 +81,7 @@ const DropOffNexus = (props: any) => {
     paymentStatus, setPaymentStatus, handleCodSelect
   } = props;
 
+  const [showInfo, setShowInfo] = useState(false);
   const ENABLE_SIMULATOR = true;
 
   useEffect(() => {
@@ -143,6 +185,8 @@ const DropOffNexus = (props: any) => {
   return (
     <div className="h-full w-full flex flex-col bg-slate-900 font-sans overflow-hidden rounded-xl border border-slate-700 relative">
       
+      {showInfo && <WorkflowInfoOverlay onClose={() => setShowInfo(false)} />}
+
       {/* 🔙 HEADER */}
       <header className="shrink-0 flex items-center justify-between px-8 py-4 bg-slate-900 border-b border-slate-800 z-20 shadow-sm">
         <div className="flex-1">
@@ -228,7 +272,7 @@ const DropOffNexus = (props: any) => {
                       })}
                     </div>
                     {/* 🌟 NEW HINT FOR SIZE */}
-                    <DemoHint message="Select the correct locker size for your parcel" className="mt-12 text-lg" />
+                    <DemoHint message="Select the correct locker size for your parcel" onInfoClick={() => setShowInfo(true)} className="mt-12 text-lg" />
                   </>
               )}
             </div>
@@ -292,7 +336,7 @@ const DropOffNexus = (props: any) => {
                 </button>
               </div>
               {/* 🌟 NEW HINT FOR LOCAL SERVICE */}
-              <DemoHint message="Choose a Destination" className="mt-2 text-lg" />
+              <DemoHint message="Choose a Destination" onInfoClick={() => setShowInfo(true)} className="mt-2 text-lg" />
             </div>
           )}
 
@@ -356,7 +400,7 @@ const DropOffNexus = (props: any) => {
                   <div className="flex gap-4">
                     <div className="flex-[1.5] space-y-2 relative">
                       {/* 🌟 NEW HINT FOR NAME */}
-                      <DemoHint message="Enter a min of 3 characters" className="absolute -top-6 left-2 text-xs" />
+                      <DemoHint message="Enter a min of 3 characters" onInfoClick={() => setShowInfo(true)} className="absolute -top-6 left-2 text-xs" />
                       <label className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] ml-4">Full Name</label>
                       <input 
                           onFocus={() => setFocusedField('senderName')} 
@@ -369,7 +413,7 @@ const DropOffNexus = (props: any) => {
                     </div>
                     <div className="flex-1 space-y-2 relative">
                       {/* 🌟 NEW HINT FOR PHONE */}
-                      <DemoHint message="Enter at least 9 numbers" className="absolute -top-6 left-2 text-xs" />
+                      <DemoHint message="Enter at least 9 numbers" onInfoClick={() => setShowInfo(true)} className="absolute -top-6 left-2 text-xs" />
                       <label className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] ml-4">Phone Number</label>
                       <input 
                           onFocus={() => setFocusedField('senderPhone')} 
@@ -414,7 +458,7 @@ const DropOffNexus = (props: any) => {
                     <div className="mt-8 pt-8 border-t border-slate-700/50 animate-in slide-in-from-top-4 fade-in duration-500 flex flex-col items-center">
                       
                       {/* 🌟 NEW HINT FOR OTP */}
-                      <DemoHint message="Type demo code here" className="mb-2 text-base" />
+                      <DemoHint message="Type demo code here" onInfoClick={() => setShowInfo(true)} className="mb-2 text-base" />
                       
                       <div className="bg-blue-500/5 p-8 rounded-3xl border border-blue-500/20 relative overflow-hidden w-full">
                         <div className="flex flex-col items-center text-center">
@@ -461,7 +505,7 @@ const DropOffNexus = (props: any) => {
             <div className="max-w-4xl mx-auto py-10 animate-in fade-in slide-in-from-right-8 duration-500 w-full flex flex-col items-center">
               
               {/* 🌟 NEW HINT FOR TOP OF CONSIGNEE FORM */}
-              <DemoHint message="Fill input boxes until they are no longer red" className="mb-4 text-lg" />
+              <DemoHint message="Fill input boxes until they are no longer red" onInfoClick={() => setShowInfo(true)} className="mb-4 text-lg" />
               
               <div className="bg-slate-800/30 p-10 rounded-[40px] border border-slate-700/50 shadow-2xl overflow-hidden w-full">
                 <div className="space-y-8 animate-in slide-in-from-left-8 fade-in duration-300 pt-2">
@@ -621,7 +665,7 @@ const DropOffNexus = (props: any) => {
               </div>
 
               {/* 🌟 NEW HINT FOR BOTTOM OF CONSIGNEE FORM */}
-              <DemoHint message="This box will only activate when above info is complete!" className="mt-4 text-lg" />
+              <DemoHint message="This box will only activate when above info is complete!" onInfoClick={() => setShowInfo(true)} className="mt-4 text-lg" />
             </div>
           )}
 
@@ -650,7 +694,7 @@ const DropOffNexus = (props: any) => {
               </div>
 
               {/* 🌟 NEW HINT FOR PAYMENT METHOD */}
-              <DemoHint message="Choose a payment method" className="mt-2 text-lg" />
+              <DemoHint message="Choose a payment method" onInfoClick={() => setShowInfo(true)} className="mt-2 text-lg" />
             </div>
           )}
 
@@ -747,7 +791,7 @@ const DropOffNexus = (props: any) => {
                   <div className="animate-in slide-in-from-bottom-8 duration-700 flex flex-col items-center w-full relative">
                     
                     {/* 🌟 NEW HINT FOR WAITING CLOSE */}
-                    <DemoHint message="Close the door by clicking on open door ->" className="mb-8 text-lg" />
+                    <DemoHint message="Close the door by clicking on open door ->" onInfoClick={() => setShowInfo(true)} className="mb-8 text-lg" />
 
                     <div className="w-full flex items-center justify-center gap-4 mb-12 bg-emerald-600/10 border-2 border-emerald-600/30 py-6 px-12 rounded-[32px] animate-pulse">
                       <DoorOpen className="text-emerald-500" size={40} />
@@ -774,6 +818,18 @@ const DropOffNexus = (props: any) => {
           )}
         </div>
       </div>
+
+      {/* 🌟 FLOATING "HOW IT WORKS" BUTTON */}
+      <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 pointer-events-auto">
+        <button 
+           onClick={(e) => { e.preventDefault(); setShowInfo(true); }} 
+           className="flex items-center gap-2 text-yellow-500/80 hover:text-yellow-400 transition-colors bg-[#0f172a] px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl border-2 border-yellow-500/20 shadow-lg active:scale-95"
+        >
+          <Info size={18} className="text-yellow-500" />
+          <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">How it Works</span>
+        </button>
+      </div>
+
     </div>
   );
 };

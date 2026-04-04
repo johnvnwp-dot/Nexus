@@ -1,5 +1,79 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, Package, Unlock, Delete, X, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
+import { ChevronLeft, Package, Unlock, Delete, X, CheckCircle2, AlertTriangle, Loader2, Info } from 'lucide-react';
+
+// 🌟 CLEAN, TEXT-ONLY PULSING HINT COMPONENT WITH INFO BUTTON
+const DemoHint = ({ message, className = "", onInfoClick }: { message: string, className?: string, onInfoClick?: () => void }) => {
+  const [show, setShow] = useState(() => localStorage.getItem('demoHints') !== 'false');
+  
+  useEffect(() => {
+    const handleToggle = () => setShow(localStorage.getItem('demoHints') !== 'false');
+    window.addEventListener('demo_hints_toggled', handleToggle);
+    return () => window.removeEventListener('demo_hints_toggled', handleToggle);
+  }, []);
+
+  if (!show) return null;
+
+  return (
+    <div className={`flex items-center justify-center gap-2 animate-pulse text-yellow-400 font-normal tracking-wide z-[200] ${className}`}>
+       <span>{message}</span>
+       {onInfoClick && (
+         <button 
+           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onInfoClick(); }} 
+           className="pointer-events-auto bg-yellow-400/20 hover:bg-yellow-400/40 text-yellow-400 rounded-full p-1 transition-colors"
+           title="View Courier Workflow"
+         >
+           <Info size={16} />
+         </button>
+       )}
+    </div>
+  );
+};
+
+// 🌟 THE WORKFLOW EXPLANATION OVERLAY (Courier Only)
+const WorkflowInfoOverlay = ({ onClose }: { onClose: () => void }) => (
+  <div className="absolute inset-0 z-[999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-8 animate-in fade-in duration-300 pointer-events-auto">
+    <div className="bg-slate-900 border-2 border-slate-700 rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-full overflow-y-auto shadow-2xl relative">
+      <button 
+        onClick={onClose}
+        className="absolute top-4 right-4 bg-slate-800 hover:bg-slate-700 text-white rounded-full p-2 transition-colors active:scale-95"
+      >
+        <X size={24} />
+      </button>
+
+      <h2 className="text-2xl font-black text-white uppercase mb-6 tracking-wide flex items-center gap-3">
+         <Info className="text-yellow-400" size={28} />
+         Courier Operations
+      </h2>
+
+      <div className="space-y-6 text-slate-300 text-sm sm:text-base leading-relaxed">
+        <div className="border-l-2 border-amber-500 pl-4">
+          <h3 className="text-amber-400 font-bold text-lg mb-2">1. Sweep (Clear Old Parcels)</h3>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li>The system identifies lockers containing outgoing customer parcels.</li>
+            <li>Open the target locker, secure the parcel in a courier bag, and <strong className="text-white">scan/type the bag's barcode</strong> to link it for tracking.</li>
+          </ul>
+        </div>
+
+        <div className="border-l-2 border-sky-500 pl-4">
+          <h3 className="text-sky-400 font-bold text-lg mb-2">2. Drop-Off (Load New Parcels)</h3>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li>Type/Scan the incoming parcel's barcode to automatically allocate an available locker.</li>
+            <li><strong>Swap & Go:</strong> If the assigned locker has an existing outgoing parcel or an empty bag, remove it and place your delivery inside.</li>
+          </ul>
+        </div>
+
+        <div className="border-l-2 border-purple-500 pl-4">
+          <h3 className="text-purple-400 font-bold text-lg mb-2">3. Restock (Provision Empty Bags)</h3>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li>Open empty doors (where customers previously collected items).</li>
+            <li>Scan a new empty courier bag to assign it to that locker.</li>
+            <li>Close the door to reset the locker for the next customer's drop-off.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 interface CourierFlowProps {
   onDone: () => void;
@@ -12,6 +86,7 @@ const CourierFlow: React.FC<CourierFlowProps> = ({ onDone }) => {
   const [step, setStep] = useState<'PIN' | 'DASHBOARD' | 'SWEEPING' | 'DROPOFF' | 'RESTOCKING'>('PIN');
   const [pin, setPin] = useState('');
   const [status, setStatus] = useState<'IDLE' | 'LOADING' | 'ERROR'>('IDLE');
+  const [showInfo, setShowInfo] = useState(false);
 
   const [kioskStats, setKioskStats] = useState({ sweepsPending: 0, restocksPending: 0, availableDrops: 0, isLoaded: false });
   const [restockLocker, setRestockLocker] = useState<{id: string, label: string, board: number, channel: number} | null>(null);
@@ -197,7 +272,7 @@ const CourierFlow: React.FC<CourierFlowProps> = ({ onDone }) => {
             setScannedBarcode('');
         } else {
             setAllocatedLocker({ label: 'Door 4', pin: '1234', board: 1, channel: 4 });
-            setExistingContent('EMPTY');
+            setExistingContent('CUSTOMER_DROP');
             setDropoffState('SUCCESS');
             try { new Audio('/pop.mp3').play().catch(() => {}); } catch(e) {}
             window.dispatchEvent(new CustomEvent('TOGGLE_VIRTUAL_DOOR', { detail: { doorId: 4, state: 'open' } }));
@@ -252,9 +327,14 @@ const CourierFlow: React.FC<CourierFlowProps> = ({ onDone }) => {
   // ==========================================
   // 🎭 THE FACE (UI RENDER)
   // ==========================================
+  
   if (step === 'RESTOCKING') {
       return (
           <div className="h-full w-full bg-slate-900 rounded-xl border border-slate-700 flex flex-col items-center justify-center p-4 sm:p-8 relative overflow-hidden font-sans">
+              
+              {/* 🌟 RENDER OVERLAY IN RESTOCKING SCREEN TOO */}
+              {showInfo && <WorkflowInfoOverlay onClose={() => setShowInfo(false)} />}
+              
               {!['AWAITING_SCAN', 'AWAITING_CLOSE', 'WARNING', 'SAVING'].includes(restockSubStep) && (
                   <button onClick={() => setStep('DASHBOARD')} className="absolute top-4 left-4 sm:top-6 sm:left-6 text-slate-400 hover:text-white flex items-center gap-2 text-sm sm:text-lg font-bold bg-slate-800/50 px-4 py-2 sm:px-5 sm:py-2.5 rounded-full transition-all active:scale-95 border border-slate-700">
                       <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" /> Dashboard
@@ -322,6 +402,9 @@ const CourierFlow: React.FC<CourierFlowProps> = ({ onDone }) => {
                               </div>
                           ) : restockLocker && status !== 'LOADING' && restockSubStep === 'AWAITING_SCAN' ? (
                               <form onSubmit={handleRestockScan} className="flex flex-col gap-3 sm:gap-4">
+                                  <div className="h-6 mb-2 flex justify-center w-full">
+                                    <DemoHint message="Scan a new empty bag" onInfoClick={() => setShowInfo(true)} className="text-sm" />
+                                  </div>
                                   <input 
                                       autoFocus
                                       type="text" 
@@ -344,6 +427,18 @@ const CourierFlow: React.FC<CourierFlowProps> = ({ onDone }) => {
                       </>
                   )}
               </div>
+
+              {/* 🌟 FLOATING "HOW IT WORKS" BUTTON (Restocking View) */}
+              <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 pointer-events-auto">
+                <button 
+                  onClick={(e) => { e.preventDefault(); setShowInfo(true); }} 
+                  className="flex items-center gap-2 text-yellow-500/80 hover:text-yellow-400 transition-colors bg-[#0f172a] px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl border-2 border-yellow-500/20 shadow-lg active:scale-95"
+                >
+                  <Info size={18} className="text-yellow-500" />
+                  <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">How it Works</span>
+                </button>
+              </div>
+
           </div>
       );
   }
@@ -351,6 +446,9 @@ const CourierFlow: React.FC<CourierFlowProps> = ({ onDone }) => {
   return (
     <div className="h-full w-full bg-[#0f172a] rounded-xl border border-slate-700 shadow-2xl flex flex-col relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8">
         
+        {/* 🌟 RENDER OVERLAY IN MAIN SCREEN */}
+        {showInfo && <WorkflowInfoOverlay onClose={() => setShowInfo(false)} />}
+
         {/* Header / Cancel Block */}
         <div className="flex justify-between items-center w-full mb-4 sm:mb-6 shrink-0 z-50 relative">
           {!(step === 'DROPOFF' && dropoffState === 'SUCCESS') && 
@@ -394,7 +492,7 @@ const CourierFlow: React.FC<CourierFlowProps> = ({ onDone }) => {
                      ))}
                      <button onClick={() => { setPin(''); resetInactivityTimer(); }} className="h-14 sm:h-16 bg-red-600 hover:bg-red-500 active:scale-95 rounded-xl text-white font-black text-base sm:text-lg shadow-md uppercase">Clr</button>
                      <button onClick={() => handleNumber('0')} className="h-14 sm:h-16 bg-slate-50 hover:bg-white active:scale-95 rounded-xl text-slate-900 text-xl sm:text-2xl font-black shadow-md">0</button>
-                     <button onClick={() => { setPin((p: string) => p.slice(0, -1)); resetInactivityTimer(); }} className="h-14 sm:h-16 bg-slate-700 hover:bg-slate-600 active:scale-95 rounded-xl text-white flex items-center justify-center shadow-md"><Delete size={20} sm:size={24}/></button>
+                     <button onClick={() => { setPin((p: string) => p.slice(0, -1)); resetInactivityTimer(); }} className="h-14 sm:h-16 bg-slate-700 hover:bg-slate-600 active:scale-95 rounded-xl text-white flex items-center justify-center shadow-md"><Delete className="w-5 h-5 sm:w-6 sm:h-6" /></button>
                    </div>
                 </div>
 
@@ -402,9 +500,8 @@ const CourierFlow: React.FC<CourierFlowProps> = ({ onDone }) => {
                   <h1 className="text-2xl sm:text-3xl font-black uppercase mb-1 sm:mb-2 tracking-tight text-white">Courier Login</h1>
                   <p className="text-slate-400 text-xs sm:text-sm mb-3 sm:mb-4">Enter your 6-digit master PIN.</p>
                   
-                  <div className="bg-amber-900/20 border border-amber-500/30 px-3 py-1.5 rounded-lg mb-4 sm:mb-6 inline-block w-max mx-auto md:mx-0">
-                     <span className="text-amber-500 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider block">Simulator Admin PIN</span>
-                     <span className="text-amber-400 font-mono font-bold text-base sm:text-lg">999999</span>
+                  <div className="h-8 mb-4 sm:mb-6 flex justify-center md:justify-start w-full">
+                     <DemoHint message="Demo PIN: 999999" onInfoClick={() => setShowInfo(true)} className="text-sm" />
                   </div>
                   
                   <div className="grid grid-cols-6 gap-1.5 sm:gap-2 mb-4 sm:mb-6 max-w-xs mx-auto md:max-w-none md:mx-0">
@@ -442,11 +539,14 @@ const CourierFlow: React.FC<CourierFlowProps> = ({ onDone }) => {
                          <p className="text-xs sm:text-sm text-slate-400 font-bold px-4">
                            {kioskStats.sweepsPending > 0 ? "⚠️ You have lockers to clear before dropping off." : "✅ Kiosk cleared. Ready for Drop-Offs!"}
                          </p>
+                         <div className="h-6 mt-4 flex justify-center w-full">
+                            <DemoHint message="Always Sweep before you Drop-off" onInfoClick={() => setShowInfo(true)} className="text-sm" />
+                         </div>
                        </div>
 
                        <div className="grid grid-cols-3 gap-2 sm:gap-4 w-full px-2">
-                          {/* SWEEP */}
-                          <button 
+                         {/* SWEEP */}
+                         <button 
                              onClick={fetchSweepList}
                              disabled={isFetchingSweep}
                              className={`relative flex flex-col items-center justify-center p-3 sm:p-5 rounded-2xl border-2 transition-all duration-300 group ${
@@ -543,6 +643,9 @@ const CourierFlow: React.FC<CourierFlowProps> = ({ onDone }) => {
 
                       {sweepActionState === 'PENDING_SCAN' ? (
                           <div className="w-full flex flex-col items-center animate-in zoom-in-95 duration-300">
+                              <div className="h-6 mb-3 flex justify-center w-full">
+                                 <DemoHint message="Scan the bag you are putting the parcel into" onInfoClick={() => setShowInfo(true)} className="text-sm" />
+                              </div>
                               <input 
                                   type="text"
                                   autoFocus
@@ -572,7 +675,7 @@ const CourierFlow: React.FC<CourierFlowProps> = ({ onDone }) => {
                                       disabled={isLinking}
                                       className="w-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 py-2.5 rounded-lg font-bold uppercase tracking-widest text-[10px] sm:text-xs transition-all active:scale-95 flex items-center justify-center gap-2"
                                   >
-                                      <AlertTriangle size={14} sm:size={16} /> Locker is Empty
+                                      <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Locker is Empty
                                   </button>
                               </div>
                           </div>
@@ -588,7 +691,7 @@ const CourierFlow: React.FC<CourierFlowProps> = ({ onDone }) => {
                         onClick={popCurrentDoor}
                         className="w-full text-slate-500 hover:text-slate-300 text-[10px] sm:text-xs font-bold uppercase tracking-wider mt-4 sm:mt-5 transition-colors flex items-center justify-center gap-2"
                       >
-                        <Unlock size={12} sm:size={14} /> Pop Door Again
+                        <Unlock className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Pop Door Again
                       </button>
                     </div>
                   </div>
@@ -603,6 +706,10 @@ const CourierFlow: React.FC<CourierFlowProps> = ({ onDone }) => {
                   <div className="text-center w-full">
                     <h2 className="text-2xl sm:text-3xl font-black uppercase text-white mb-2 tracking-tight">Type Parcel Barcode</h2>
                     <p className="text-slate-400 text-sm sm:text-base mb-6">Enter the tracking number below.</p>
+                    
+                    <div className="h-6 mb-4 flex justify-center w-full">
+                       <DemoHint message="Type TRK-12345 or any string > 3 chars" onInfoClick={() => setShowInfo(true)} className="text-sm" />
+                    </div>
                     
                     {allocationError && (
                       <div className="bg-red-500/10 border border-red-500 text-red-400 p-3 sm:p-4 rounded-xl mb-4 sm:mb-6 flex flex-col items-center gap-2 animate-in fade-in zoom-in">
@@ -641,6 +748,9 @@ const CourierFlow: React.FC<CourierFlowProps> = ({ onDone }) => {
 
                 {dropoffState === 'SUCCESS' && allocatedLocker && (
                   <div className="absolute inset-0 w-full h-full z-[100] bg-[#0f172a] rounded-xl flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
+                     <div className="h-6 mb-4 flex justify-center w-full">
+                        <DemoHint message="Swap & Go: The core concept of a PUDO locker" onInfoClick={() => setShowInfo(true)} className="text-sm" />
+                     </div>
                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center border-2 border-green-500 mb-4 shadow-[0_0_20px_rgba(34,197,94,0.3)]">
                          <Unlock className="w-8 h-8 sm:w-10 sm:h-10" />
                      </div>
@@ -674,6 +784,18 @@ const CourierFlow: React.FC<CourierFlowProps> = ({ onDone }) => {
               </div>
             )}
         </div>
+
+        {/* 🌟 FLOATING "HOW IT WORKS" BUTTON (Main View) */}
+        <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 pointer-events-auto">
+          <button 
+             onClick={(e) => { e.preventDefault(); setShowInfo(true); }} 
+             className="flex items-center gap-2 text-yellow-500/80 hover:text-yellow-400 transition-colors bg-[#0f172a] px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl border-2 border-yellow-500/20 shadow-lg active:scale-95"
+          >
+            <Info size={18} className="text-yellow-500" />
+            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">How it Works</span>
+          </button>
+        </div>
+
     </div>
   );
 };
