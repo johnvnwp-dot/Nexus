@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Wifi, Truck, Package, ToggleLeft, ToggleRight, Info, X } from 'lucide-react';
+import packageJson from '../package.json';
 
 // 🌟 THE WORKFLOW EXPLANATION OVERLAY (Updated to "absolute" to stay in the tablet screen)
 const WorkflowInfoOverlay = ({ onClose }: { onClose: () => void }) => (
@@ -208,9 +209,9 @@ const DashboardNexus: React.FC<DashboardProps> = ({
             <Info size={18} />
             <span className="text-xs font-bold uppercase tracking-wider">How it Works</span>
           </button>
-          <div className="text-center text-slate-600 text-xs font-medium">
-            v3.5.0 Build 2026-03-26 | Enterprise Kiosk Mode Active
-          </div>
+        <div className="text-center text-slate-600 text-xs font-medium">
+          v{packageJson.version} Build 2026-03-26 | Enterprise Kiosk Mode Active
+        </div>
         </div>
 
         {/* Right Side: Courier Button */}
