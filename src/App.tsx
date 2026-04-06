@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Package, Lock, Unlock } from 'lucide-react';
+import { Package, Lock, Unlock, Home } from 'lucide-react';
 import DashboardNexus from './DashboardNexus';
 import DropOffFlow from './DropOffFlow';
 import PickUpFlow from './PickupFlow/PickupFlow';
@@ -63,9 +63,18 @@ function App() {
     return () => window.removeEventListener('TOGGLE_VIRTUAL_DOOR', handleDoorCommand);
   }, [doors]);
 
-  return (
+  return (    
     <div className="w-screen h-screen flex bg-slate-950 text-white overflow-hidden font-sans">
       
+    {/* 🌟 NEW: FLOATING "BACK TO PORTAL" BUTTON */}
+      <a 
+        href="https://smartlocker.africa"
+        className="absolute top-6 right-8 z-[100] flex items-center gap-3 px-6 py-3 bg-sky-500/10 hover:bg-sky-500/20 border-2 border-sky-500/30 hover:border-sky-500 rounded-full text-sky-400 hover:text-white transition-all shadow-[0_0_20px_rgba(14,165,233,0.15)] hover:shadow-[0_0_30px_rgba(14,165,233,0.3)] active:scale-95 cursor-pointer backdrop-blur-md group"
+      >
+        <Home size={20} className="group-hover:-translate-y-0.5 transition-transform" />
+        <span className="font-black tracking-widest uppercase text-sm">Back to Home</span>
+      </a>
+
       {/* =========================================
           LEFT SIDE: THE "BRAIN" (TABLET UI - 65%)
           ========================================= */}
