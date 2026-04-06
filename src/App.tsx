@@ -66,15 +66,6 @@ function App() {
   return (    
     <div className="w-screen h-screen flex bg-slate-950 text-white overflow-hidden font-sans">
       
-    {/* 🌟 NEW: FLOATING "BACK TO PORTAL" BUTTON */}
-      <a 
-        href="https://smartlocker.africa"
-        className="absolute top-6 right-8 z-[100] flex items-center gap-3 px-6 py-3 bg-sky-500/10 hover:bg-sky-500/20 border-2 border-sky-500/30 hover:border-sky-500 rounded-full text-sky-400 hover:text-white transition-all shadow-[0_0_20px_rgba(14,165,233,0.15)] hover:shadow-[0_0_30px_rgba(14,165,233,0.3)] active:scale-95 cursor-pointer backdrop-blur-md group"
-      >
-        <Home size={20} className="group-hover:-translate-y-0.5 transition-transform" />
-        <span className="font-black tracking-widest uppercase text-sm">Back to Home</span>
-      </a>
-
       {/* =========================================
           LEFT SIDE: THE "BRAIN" (TABLET UI - 65%)
           ========================================= */}
@@ -108,6 +99,15 @@ function App() {
           RIGHT SIDE: THE "BODY" (VIRTUAL LOCKER - 35%)
           ========================================= */}
       <div className="w-[35%] h-full bg-slate-950 p-8 flex flex-col items-center justify-center relative overflow-hidden">
+        
+        {/* 🌟 MOVED HERE: FLOATING "BACK TO PORTAL" BUTTON */}
+        <a 
+          href="https://smartlocker.africa"
+          className="absolute top-8 right-8 z-[100] flex items-center gap-3 px-6 py-3 bg-sky-500/10 hover:bg-sky-500/20 border-2 border-sky-500/30 hover:border-sky-500 rounded-full text-sky-400 hover:text-white transition-all shadow-[0_0_20px_rgba(14,165,233,0.15)] hover:shadow-[0_0_30px_rgba(14,165,233,0.3)] active:scale-95 cursor-pointer backdrop-blur-md group"
+        >
+          <Home size={20} className="group-hover:-translate-y-0.5 transition-transform" />
+          <span className="font-black tracking-widest uppercase text-sm">Back to Portal</span>
+        </a>
         
         {/* Decorative Background grid */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-20"></div>
